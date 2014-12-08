@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    .clockGroup { stroke: #000; stroke-width: 2; }
+    .hand { corner-radius: 2 }
+    .hand#hour   { stroke-width: 10 }
+    .hand#minute { stroke-width: 5 }
+    .hand#second { stroke-width: 2 }
+
+</style>
+<body>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+        var svg,
+            width = 960,
+            height = 500,
+            margin = 20,
+            clock_radius = height / 2 - margin;
+
+        var hand_data = [
+            {
+                'hand': 'hour',
+                'value': 0,
+                'arc' : d3.svg.arc()
+                    .innerRadius(0).outerRadius(3 * clock_radius / 4)
+                    .startAngle(0).endAngle(0),
+                'scale': d3.scale.linear()
+                    .domain([0, 12]).range([0, 2 * Math.PI])
+            },
+            {
+                'hand': 'minute',
+                'value': 0,
+                'arc': d3.svg.arc()
+                    .innerRadius(0).outerRadius(clock_radius - 10)
+                    .startAngle(0).endAngle(0),
+                'scale': d3.scale.linear()
+                    .domain([0, 60]).range([0, 2 * Math.PI])
+            },
+            {
+                'hand': 'second',
+                'value': 0,
+                'arc': d3.svg.arc()
+                    .innerRadius(0).outerRadius(clock_radius - 10)
+                    .startAngle(0).endAngle(0),
+                'scale': d3.scale.linear()
+                    .domain([0, 60]).range([0, 2 * Math.PI])
+            }
+        ];
+
+        function draw_clock() {
+
+            svg = d3.select('body').append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .append('g')
+                .attr('class', 'clockGroup')
+                .attr('transform', 'translate(' + width / 2 +
+                        ',' + height / 2 + ')');
+
+            // Outer Circle
+            svg.append('circle').attr('class', 'clock')
+                .attr('id', 'outer')
+                .attr('stroke-width', '2')
+                .attr('fill', 'white')
+                .attr('r', clock_radius);
+
+            // Clock Hands
+            svg.selectAll('path.hand').data(hand_data).enter()
+                .append('path')
+                .attr('class', 'hand')
+                .attr('id', function(d) {
+                    return d.hand;
+                })
+                .attr('d', function(d) {
+                    return d.arc(d);
+                });
+
+
+            // Inner Circle
+            svg.append('circle').attr('class', 'clock')
+                .attr('id', 'inner')
+                .attr('fill', 'white')
+                .attr('r', '10');
+        }
+
+        function get_current_time() {
+            var now = new Date(),
+                secs  = now.getSeconds(),
+                mins  = now.getMinutes() + (secs / 60),
+                hours = now.getHours() % 12 + (mins / 60);
+
+            hand_data[2].value = secs;
+            hand_data[1].value = mins;
+            hand_data[0].value = hours;
+        }
+
+        function update_clock() {
+            get_current_time();
+
+            svg.selectAll('path.hand')
+                .each(function(d) {
+                    d.arc.startAngle(d.scale(d.value))
+                        .endAngle(d.scale(d.value))
+                })
+                .attr('d', function(d) {
+                    return d.arc(d);
+                });
+        }
+
+        draw_clock();
+        update_clock();
+        setInterval(update_clock, 1000);
+
+    </script>
+</body>
