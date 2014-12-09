@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    .ball {
+        fill: white;
+        stroke: black;
+        stroke-width: 2;
+    }
+</style>
+<body>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+        var num_balls = 40,
+            ball_max_y = 100,
+            ball_radius = 9,
+            ball_spacing = 20,
+            margin = 10,
+            width = ((num_balls - 1) * ball_spacing) + (2 * margin),
+            height = (2 * ball_max_y) + (2 * margin),
+            time = 0,
+            colors = ['red','green','blue'];
+
+        var svg = d3.select('body').append('svg')
+            .attr('width', 960)
+            .attr('height', 500)
+            .append('g')
+            .attr('transform', 'translate(' + ((960 - width) / 2) + ',' +
+                    ((500 - height) / 2) + ')');
+
+        var balls = svg.selectAll('circle.ball')
+            .data(new Array(num_balls)).enter()
+            .append('circle')
+            .attr('class', 'ball')
+            .attr('r', ball_radius);
+
+        function get_y(ball_num, time) {
+            return (ball_max_y + margin) + (ball_max_y *
+                (Math.sin((time / 2 * (ball_num / 500 + 0.02)) % 2 * Math.PI)));
+        }
+
+        function update(time) {
+            balls.attr('transform', function(d, i) {
+                return 'translate(' + (i * ball_spacing + margin) + ',' +
+                    get_y(i, time) + ')';
+            });
+        }
+
+        (function animationLoop(){
+            requestAnimationFrame(animationLoop);
+            update(time++);
+        })();
+
+    </script>
+</body>
