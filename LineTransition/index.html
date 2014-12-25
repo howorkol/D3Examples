@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    .axis path, .axis line {
+        fill: none;
+        stroke: black;
+        shape-rendering: crispEdges;
+    }
+
+    .axis text {
+        font-family: sans-serif;
+        font-size: 11px;
+    }
+    
+    path.line {
+        fill: none;
+        stroke: black;
+    }
+
+</style>
+<body>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+        var width = 960,
+            height = 500,
+            chart_width = 800,
+            chart_height = 100,
+            data = [];
+        
+        var margin = {
+            left: (width - chart_width) / 2,
+            top: (height - chart_height) / 2
+        }
+        
+        var x = d3.scale.linear().domain([0, 79]).range([0, chart_width]);
+        var y = d3.scale.linear().domain([0, 1]).range([chart_height, 0]);
+        
+        var yAxis = d3.svg.axis().scale(y)
+            .orient('left').ticks(5);
+        
+        var line = d3.svg.line()
+            .x(function(d, i) { return x(i); })
+            .y(function(d) { return y(d); });
+        
+        var svg = d3.select('body').append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .append('g')
+            .attr('width', chart_width)
+            .attr('height', chart_height)
+            .attr('transform', 'translate(' + margin.left + ',' +
+                  margin.top + ')');
+        
+        svg.append('defs').append('clipPath')
+            .attr('id', 'clip')
+            .append('rect')
+            .attr('width', chart_width)
+            .attr('height', chart_height);
+        
+        svg.append('g')
+            .attr('class', 'y axis').call(yAxis)
+        
+        for (var i = 0; i < 80; i++) {
+            data.push(Math.random());
+        }
+        
+        var path = svg.append('g')
+            .attr('clip-path', 'url(#clip)')
+            .append('path')
+            .datum(data)
+            .attr('class', 'line')
+            .attr('d', line);
+        
+        function update_chart() {
+            data.push(Math.random());
+            
+            path.attr('d', line)
+                .attr('transform', null)
+                .transition().duration(200)
+                .ease('linear')
+                .attr('transform', 'translate(' + x(-1) + ')')
+                .each('end', update_chart);
+            
+            data.shift();
+        }
+        
+        update_chart();
+    </script>
+</body>
