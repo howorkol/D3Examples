@@ -1,0 +1,173 @@
+<!doctype html>
+<head>
+  <style>
+    html, body {
+      width: 960px;
+      height: 500px;
+    }
+    
+    html, body, div#map, div#legend {
+      margin: 0;
+      padding: 0;
+    }
+    
+    div#map, div#legend {
+      height: 496px;
+      border: 2px solid black;
+      display: inline-block;
+    }
+    
+    div#map {
+      width: 804px;
+      border-right: none;
+    }
+    
+    div#legend {
+      width: 140px;
+      padding: 0px 5px;
+      margin-left: -4px;
+      vertical-align: top;
+      font: 12px sans-serif;
+    }
+    
+    .projects, .projects svg {
+      position: absolute;
+    }
+    
+    .projects svg {
+      width: 10px;
+      height: 10px;
+    }
+    
+    .projects circle {
+      stroke: black;
+      stroke-width: 1.5px;
+      cursor: pointer;
+    }
+    
+    .projects circle.selected {
+      fill: white; 
+    }
+    
+    
+  </style>
+  <script src="http://maps.google.com/maps/api/js?sensor=true"></script>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+</head>
+
+<body>
+  <div id='map'></div>
+  <div id='legend'>
+    <p><span id='title'></span></p>
+    <p><span id='location'></span></p>
+    <p><span id='constituency'></span></p>
+    <p><span id='cost'></span></p>
+    <p><span id='status'></span></p>
+    <p><span id='end_date'></span></p>
+    <p><span id='source'></span></p>
+    <p><a id='url'></span></p>
+  </div>
+  
+  <script>
+    var map = new google.maps.Map(d3.select('div#map').node(), {
+      zoom: 5,
+      minZoom: 5,
+      center: new google.maps.LatLng(54.5, -115.0),
+      mapTypeId: google.maps.MapTypeId.TERRAIN
+    });
+    
+    d3.json('http://data.iae.alberta.ca/resource/dgy9-t2av.json', function(data) {
+      var overlay = new google.maps.OverlayView();
+      var seen_statuses = {};
+      var colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+                   '#8c564b', '#e377c2'];
+      
+      overlay.onAdd = function() {
+        var layer = d3.select(this.getPanes().overlayMouseTarget)
+            .append('div')
+            .attr('class', 'projects');
+        
+        overlay.draw = function() {
+          var projection = this.getProjection(),
+              padding = 5;
+          
+          var marker = layer.selectAll('svg')
+              .data(data)
+              .each(transform)
+              .enter().append('svg:svg')
+              .each(transform)
+              .attr('class', 'marker');
+          
+          marker.append('svg:circle')
+              .attr('r', 4)
+              .attr('cx', padding)
+              .attr('cy', padding)
+              .attr('fill', getColor)
+              .on('click', function(d) {
+                d3.selectAll('circle')
+                  .classed('selected', false);
+                d3.select(this)
+                  .classed('selected', true);
+                d3.select('span#title')
+                  .text(d.title);
+                d3.select('span#location')
+                  .text('Location: ' + d.location);
+                d3.select('span#constituency')
+                  .text('Constituency: ' + d.constituency);
+                d3.select('span#cost')
+                  .text('Cost: $' + d.cost + ' Million');
+                if (d.name != 'NULL')
+                  d3.select('span#status')
+                    .text('Status: ' + d.name);
+                else 
+                  d3.select('span#status')
+                    .text('Status: Unknown');
+                switch(d.name) {
+                  case 'On Hold':
+                  case 'Under Construction':
+                  case 'Announced':
+                  case 'Proposed':
+                    d3.select('span#end_date')
+                        .text('Scheduled End Date: ' + d.scheduled_date_end);
+                    break;
+                  case 'Completed':
+                    d3.select('span#end_date')
+                        .text('End Date: ' + d.completion_date);
+                }
+                d3.select('span#source')
+                  .text('Source: ' + d.source_of_latest_info);
+                if (d.url != 'NULL')
+                  d3.select('a#url')
+                    .text(d.url)
+                    .attr('href', 'http://' + d.url);
+              });
+          
+          
+          function getColor(d) {
+            if (!seen_statuses[d.name]) {
+              seen_statuses[d.name] = colors.shift();
+            }
+            return seen_statuses[d.name];
+          }
+          
+          function transform(d) {
+            if (!d.location_start) 
+              return d3.select(this)
+                  .style('display', 'none');
+            
+            d = new google.maps.LatLng(
+                d.location_start.latitude,
+                d.location_start.longitude
+            );
+            d = projection.fromLatLngToDivPixel(d);
+            
+            return d3.select(this)
+                .style('left', (d.x - padding) + 'px')
+                .style('top', (d.y - padding) + 'px');
+          }    
+        };
+      };
+      overlay.setMap(map);
+    });
+  </script>
+</body>
