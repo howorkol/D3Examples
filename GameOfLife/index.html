@@ -1,0 +1,227 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Box Plot</title>
+    <style>
+        rect.square {
+            fill: #FFFFFF;
+            stroke: #000000;
+            stroke-width: 1;
+            shape-rendering: crispEdges;
+        }
+
+        rect.square.active {
+            fill: #555555;
+        }
+
+        button {
+            position: absolute;
+            top: 15px;
+            width: 80px;
+            padding: 2px 10px;
+            background-color: #CCCCCC;
+            opacity: 0.8;
+            border: none;
+        }
+
+        button:hover {
+            background-color: #AAAAAA;
+        }
+
+        button#toggle {
+            left: 15px;
+        }
+
+        button#reset {
+            left: 100px;
+        }
+    </style>
+
+</head>
+<body>
+    <div="container">
+        <div id="board-pane"></div>
+        <button id="toggle" status="Start">Start</button>
+        <button id="reset">Reset</button>
+    </div>
+
+    <script src="http://d3js.org/d3.v3.js"></script>
+    <script>
+        var box_width = 10;
+        var svg_width = 960;
+        var svg_height = 500;
+
+        var tick_time = 100;
+
+        var width = svg_width / box_width;
+        var height = svg_height / box_width;
+
+        var game_board;
+        var board_data;
+
+        var tickInterval;
+
+        init();
+
+
+        function start() {
+            tickInterval = setInterval(function() {
+                board_data = tick();
+                update();
+            }, tick_time);
+        }
+
+        function stop() {
+            clearInterval(tickInterval);
+        }
+
+        function reset() {
+            board_data = get_empty_board();
+            update();
+        }
+
+        function init() {
+            d3.select('button#toggle')
+                .on('click', function() {
+                    var type = d3.select(this).attr('status');
+                    var reset = d3.select('button#reset');
+                    
+                    if (type === 'Start') {
+                        start();
+                        set_button(this, 'Stop');
+                        reset.attr('disabled', '');
+                    } else if (type === 'Stop') {
+                        stop();
+                        set_button(this, 'Start');
+                        reset.attr('disabled', null);
+                    }
+                });
+
+            d3.select('button#reset')
+                .on('click', reset);
+
+            game_board = d3.select('div#board-pane').append('svg')
+                .attr('width', svg_width + 1)
+                .attr('height', svg_height + 1)
+              .append('g')
+                .attr('class', 'game-board');
+
+            reset();
+        }
+
+        function set_button(button, new_state) {
+            d3.select(button)
+                .attr('status', new_state)
+                .text(new_state);
+        }
+
+        function get_empty_board() {
+            var data = [];
+
+            for (var x = 0; x < width; x++) {
+                data.push([]);
+
+                for (var y = 0; y < height; y++) {
+                    data[x].push(false);
+                }
+            }
+
+            return data;
+        }
+
+        function update() {
+            var columns = game_board.selectAll('g.column')
+                .data(board_data);
+
+            columns.enter().append('g')
+                .attr('class', 'column')
+                .attr('xPos', function(d, i) {
+                    return i;
+                })
+                .attr('transform', function(d, i) {
+                    return 'translate(' + (i * box_width) + ',0)';
+                });
+
+            var squares = columns.selectAll('rect')
+                .data(function(d) {
+                    return d;
+                })
+              .enter().append('rect')
+                .attr('yPos', function(d, i) {
+                    return i;
+                })
+                .attr('y', function(d, i) {
+                    return i * box_width;
+                })
+                .attr('class', 'square')
+                .attr('width', box_width)
+                .attr('height', box_width)
+                .on('click', click);
+
+            game_board.selectAll('rect.square')
+                .classed('active', function(d) {
+                    return d;
+                });
+        }
+
+        function click(active) {
+            var x = d3.select(this.parentNode).attr('xPos');
+            var y = d3.select(this).attr('yPos');
+
+            board_data[x][y] = !active;
+
+            d3.select(this)
+                .data([!active])
+                .classed('active', !active);
+        }
+
+        function tick() {
+            var next_gen = get_empty_board();
+
+            for (var x = 0; x < width; x++) {
+                for (var y = 0; y < height; y++) {
+                    var neighbour_count = 0;
+                    var neighbours = [ [-1, -1], [0, -1], [1, -1],
+                        [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1] ];
+
+                    neighbours.forEach(function(d) {
+                        var new_coor = add_points([x, y], d);
+
+                        if (new_coor && board_data[new_coor[0]][new_coor[1]]) {
+                            neighbour_count++;
+                        }
+                    });
+
+                    if (shouldBeAlive(board_data[x][y], neighbour_count)) {
+                        next_gen[x][y] = true;
+                    }
+                }
+            }
+
+            return next_gen;
+        }
+
+        function shouldBeAlive(alive, neighbour_count) {
+            if (alive && neighbour_count < 2) {
+                return false;
+            } else if (alive && (neighbour_count === 2 || neighbour_count === 3)) {
+                return true;
+            } else if (alive && neighbour_count > 3) {
+                return false;
+            } else if (!alive && neighbour_count === 3) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function add_points(coor, offset) {
+            var x = (coor[0] + offset[0] + width) % width;
+            var y = (coor[1] + offset[1] + height) % height;
+
+            return [x, y];
+        }
+    </script>
+</body>
+</html>
